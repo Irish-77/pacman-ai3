@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 from options import Movements, Blocks
 
 class Ghost():
@@ -20,24 +21,21 @@ class Ghost():
     def remove_last_opposite_direction(self, possible_directions) -> list:
         if self.last_direction is None:
             return possible_directions
-        try:
-            if self.last_direction == Movements.UP:
-                possible_directions.remove(Movements.DOWN)
-            elif self.last_direction == Movements.DOWN:
-                possible_directions.remove(Movements.UP)
-            elif self.last_direction == Movements.RIGHT:
-                possible_directions.remove(Movements.LEFT)
-            elif self.last_direction == Movements.LEFT:
-                possible_directions.remove(Movements.RIGHT)
-            else:
-                pass #not reachable
-        except Exception as e:
-            print('Direction not playable')
+
+        if self.last_direction == Movements.UP:
+            possible_directions.remove(Movements.DOWN)
+        elif self.last_direction == Movements.DOWN:
+            possible_directions.remove(Movements.UP)
+        elif self.last_direction == Movements.RIGHT:
+            possible_directions.remove(Movements.LEFT)
+        elif self.last_direction == Movements.LEFT:
+            possible_directions.remove(Movements.RIGHT)
+        else:
+            warnings.warn(f'Error in MATRIX! Unknown direction: {self.last_direction}.')
+            
         return possible_directions
 
     def move(self):
-        # TODO: improve movement for more smoothness
-
         possible_directions = self.get_possible_directions()
 
         # Overview of different situations:
@@ -51,8 +49,6 @@ class Ghost():
         # |-----| |-----| |-----| |-----| |-----|
         # Number of ways:
         #    4       3       2       2       1  
-        # Works with below code:
-        #   Yes     Yes     Yes     Yes     Yes
 
         if len(possible_directions) > 1:
             possible_directions = self.remove_last_opposite_direction(possible_directions)

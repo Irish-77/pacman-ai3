@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 from os.path import join
-from datetime import datetime
 
 class Recorder():
     def __init__(self, fps=15, height=480, width=640, folder = 'videos') -> None:
@@ -12,7 +11,10 @@ class Recorder():
         self.folder = folder
 
         self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        self.video = cv2.VideoWriter(join(self.folder, f'pacman_{datetime.today().strftime("%Y_%m_%d_%H_%M_%S")}.mp4'), self.fourcc, self.fps, (self.width, self.height))
+        self.video = None
+
+    def init_new_video(self, id):
+        self.video = cv2.VideoWriter(join(self.folder, f'pacman_{id}.mp4'), self.fourcc, self.fps, (self.width, self.height))
 
     def add_image(self, img) -> None:
         nparr = np.frombuffer(img, np.uint8)
@@ -21,5 +23,7 @@ class Recorder():
         self.video.write(frame)
 
     def close_recording(self) -> None:
+        if self.video is None:
+            raise Exception('No video initialized.')
         self.video.release()
         cv2.destroyAllWindows()

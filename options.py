@@ -5,7 +5,6 @@ from enum import Enum
 
 Block = namedtuple('Block', ['value', 'color'])
 class Blocks(Enum):
-    # __order__ = 'EMPTY WALL PACMAN GHOST COIN GHOST_ON_COIN'
 
     @property
     def color(self):
@@ -20,18 +19,20 @@ class Blocks(Enum):
     PACMAN = Block(2, 'orange')
     GHOST = Block(3, 'blue')
     COIN = Block(4, 'yellow')
-    # GHOST_ON_COIN = Block(5, 'deepskyblue') # removed if not needed
 
 
 Movement = namedtuple('Movement', ['value', 'direction'])
 class Movements(Enum):
-    # __order__ = 'UP DOWN LEFT RIGHT'
 
     @property
     def direction(self):
         return self.value.direction
 
-    UP = Movement(1, np.array([-1, 0]))
-    LEFT = Movement(2, np.array([0, -1]))
-    DOWN = Movement(3, np.array([1, 0]))
-    RIGHT = Movement(4, np.array([0, 1]))
+    @property
+    def id(self):
+        return self.value.value
+
+    UP = Movement(0, np.array([-1, 0]))
+    LEFT = Movement(1, np.array([0, -1]))
+    DOWN = Movement(2, np.array([1, 0]))
+    RIGHT = Movement(3, np.array([0, 1]))

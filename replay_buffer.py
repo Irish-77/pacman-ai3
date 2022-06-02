@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 class Experience():
     def __init__(self, observation, action, reward, next_observation, done) -> None:
@@ -8,40 +9,31 @@ class Experience():
         self.next_observation = next_observation
         self.done = done
 
-    def __iter__(self):
-        yield from [self.observation, self.action, self.reward, self.next_observation, self.done]
-
 class ReplayBuffer():
 
-    def __init__(self, min_size:int, max_size:int, batch_size:int, gamma:float=0.99) -> None:
+    def __init__(self, min_size:int, max_size:int, batch_size:int, device) -> None:
         self.min_size = min_size
         self.max_size = max_size
         self.batch_size = batch_size
-        self.gamma = gamma
+        self.device = device
         self.experiences = []
-
+        
     def add_experience(self, observation, action, reward, next_observation, done) -> None:
-        # check len
         experience = Experience(observation, action, reward, next_observation, done)
         if len(self.experiences) > self.max_size:
             del self.experiences[0]
         self.experiences.append(experience)
 
-    def get_batch(self):
-        # customize if necessary
-
+    def get_batch(self) -> list[Experience]:
         if len(self.experiences) < self.min_size:
             return None
         
-        selected_experiences = np.random.choice(self.experiences, size = self.batch_size)
+        batch = np.random.choice(self.experiences, size = self.batch_size)
 
-        observations, actions, rewards, next_observations, dones = [], [], [], [], []
+        non_final_mask = torch.tensor(tuple(map(lambda s: s.next_observation is not None, batch)), device=self.device, dtype=torch.bool)
+        non_final_next_states = torch.cat([torch.tensor(np.array([[s.next_observation]])) for s in batch if s.next_observation is not None]).to(self.device, dtype=torch.float)
+        state_batch = torch.cat([torch.tensor(np.array([[s.observation]])) for s in batch]).to(self.device, dtype=torch.float)
+        action_batch = torch.cat([torch.tensor([[s.action.id]]) for s in batch]).to(self.device)
+        reward_batch = torch.tensor([s.reward for s in batch]).to(self.device)
 
-        for observation, action, reward, next_observation, done in selected_experiences:
-            observations.append(observation)
-            actions.append(action)
-            rewards.append(reward)
-            next_observations.append(next_observation)
-            dones.append(done)
-
-        return observations, actions, rewards, next_observations, dones
+        return non_final_mask, non_final_next_states, state_batch, action_batch, reward_batch
