@@ -1,3 +1,5 @@
+from _future_ import annotations
+
 import io
 import numpy as np
 import matplotlib.colors as mat_colors

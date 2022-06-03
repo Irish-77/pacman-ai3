@@ -1,3 +1,5 @@
+from _future_ import annotations
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
