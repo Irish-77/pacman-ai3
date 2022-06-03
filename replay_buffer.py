@@ -92,8 +92,7 @@ class ReplayBuffer():
         non_final_next_states = torch.cat(non_final_next_states) \
             .to(self.device, dtype=torch.float)
 
-        state_batch = torch.cat([torch.tensor(np.array([[s.observation]])) \
-            for s in batch]).to(self.device, dtype=torch.float)
+        state_batch = [torch.tensor(np.array([[s.observation]])) for s in batch]
         state_batch = torch.cat(state_batch).to(self.device, dtype=torch.float)
 
         action_batch = [torch.tensor([[s.action.id]]) for s in batch]
