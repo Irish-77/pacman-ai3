@@ -158,6 +158,8 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
 
             if done:
                 break
+        
+        train_agent.update_eps()
 
         mean_loss = np.mean(losses) if len(losses) > 0 else 0
         steps.append(i)
@@ -171,7 +173,8 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
         if (e % save_state == 0):
             logger.info((f'episode: {e:6d} | #steps: {np.mean(steps):9.5f} | '
                 f'avg loss: {np.mean(avg_losses):9.5f} | acc reward: '
-                f'{np.mean(acc_rewards):9.5f}'))
+                f'{np.mean(acc_rewards):9.5f} | epsilon: '
+                f'{train_agent.epsilon:7.5f}'))
             steps = []
             acc_rewards = []
             avg_losses = []

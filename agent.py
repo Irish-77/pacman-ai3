@@ -44,8 +44,7 @@ class Agent():
 
         This function checks if a random number is above Epsilon. If this is the
         case, the new direction is calculated randomly. Otherwise, the model
-        calculates the Pacman's new direction. Afterwards, Epsilon is reduced to
-        a limit to let the model calculate a move more frequently.
+        calculates the Pacman's new direction.
 
         Args:
             observation (np.array): Current state of the map
@@ -62,12 +61,20 @@ class Agent():
         else:
             next_move, _ = self.model.predict(observation) # predict move
 
+        return next_move
+
+    def update_eps(self) -> None:
+        """Update Epsilon with Decay
+
+        Epsilon is decaying over time to reduce the randomness until it reaches
+        a limit. This method should be executed after every episode during
+        training.
+
+        """
         if self.epsilon > self.epsilon_min: # check if limit is exceeded
             self.epsilon *= self.epsilon_decay # reduce epsilon
         else:
             self.epsilon = self.epsilon_min
-
-        return next_move
     
     def predict_new_move(self, observation: np.array) -> Movements:
         """Determines Pacman's new direction
