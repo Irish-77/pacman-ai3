@@ -24,7 +24,7 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
     debug:bool=True, num_episodes:int=1000, target_update:int=25,
     save_state:int=50, batch_size:int=200, max_replay_size:int=1e4,
     gamma:float=0.99, init_epsilon:float=0.99, epsilon_decay:float=0.997,
-    epsilon_min:float=0.05) -> None:
+    epsilon_min:float=0.05, lr:float=1e-4) -> None:
     """Train a new reinforcement learning for the Pacman environment
 
     Args:
@@ -60,6 +60,7 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
             rate. Defaults to 0.997.
         epsilon_min (float, optional): The minimum value for the epsilon.
             Defaults to 0.05.
+        lr (float, optional): Learning rate for the optimizer. Defaults to 1e-4.
     """
 
     id = id if id is not None else get_date_as_string()
@@ -75,6 +76,7 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
                    \t init_epsilon: {init_epsilon}
                    \t epsilon_decay: {epsilon_decay}
                    \t epsilon_min: {epsilon_min}
+                   \t learning_rate: {lr}
                     ''')
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -88,7 +90,7 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
     replay_buffer = ReplayBuffer(min_size=batch_size,
         max_size=max_replay_size, batch_size=batch_size, device=device)
     env = Environment(path=join('maps', map))
-    optimizer = optim.RMSprop(train_agent.model.parameters())
+    optimizer = optim.RMSprop(train_agent.model.parameters(), lr=lr)
     if record:
         recorder = Recorder()
 
@@ -323,6 +325,9 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--gamma', default=0.99, type=float,
         help='The discount rate for future expected rewards. This only applies '
         'for mode \'train\'.', dest='gamma')
+    parser.add_argument('-lr', '--learning-rate', default=1e-4, type=float,
+        help='Learning rate for the optimizer. This only applies for mode '
+        '\'train\'.', dest='learning_rate')
     args = parser.parse_args()
 
     if args.mode == 'play':
@@ -334,4 +339,4 @@ if __name__ == '__main__':
             batch_size=args.batch_size, max_replay_size=args.max_replay_size,
             gamma=args.gamma, init_epsilon=args.init_epsilon, debug=args.debug,
             epsilon_decay=args.epsilon_decay, epsilon_min=args.epsilon_min,
-            save_state=args.save_state)
+            save_state=args.save_state, lr=args.learning_rate)
