@@ -8,7 +8,7 @@ class DQModelWithCNN(nn.Module):
     """Deep Q Neuronal Network with CNN"""
 
     def __init__(self, device:torch.device, height:int=21, width:int=31,
-        number_of_actions:int=4):
+        number_of_actions:int=4) -> None:
         """Constructor
 
         Args:

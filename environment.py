@@ -59,7 +59,7 @@ class Environment():
 
         Args:
             path (str): Path to the map
-            
+
         Returns:
             np.array: Map as numpy matrix
         """
@@ -311,7 +311,7 @@ class Environment():
 
         Returns:
             tuple[mpatches.Patch]:
-                list containing two patches: one for current step (iteration)
+                tuple containing two patches: one for current step (iteration)
                 and the second one for the achieved points so far  
         """
 

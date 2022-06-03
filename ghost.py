@@ -83,7 +83,8 @@ class Ghost():
         elif self.last_direction == Movements.LEFT:
             possible_directions.remove(Movements.RIGHT)
         else:
-            warnings.warn(f'Error in MATRIX! Unknown direction: {self.last_direction}.')
+            warnings.warn(f'Error in MATRIX! Unknown direction:'
+                          f'{self.last_direction}.')
             
         return possible_directions
 
@@ -109,7 +110,8 @@ class Ghost():
         possible_directions = self.get_possible_directions()
 
         if len(possible_directions) > 1:
-            possible_directions = self.remove_last_opposite_direction(possible_directions)
+            possible_directions = self \
+                .remove_last_opposite_direction(possible_directions)
         
         new_direction = np.random.choice(possible_directions)
         self.last_direction = new_direction
