@@ -59,6 +59,7 @@ class Environment():
 
         Args:
             path (str): Path to the map
+            
         Returns:
             np.array: Map as numpy matrix
         """
@@ -112,8 +113,8 @@ class Environment():
         The Pacman object is created, the initial position is passed to the
         object. Since the position array cotains only one location, the for loop
         will only be iterated once.
-
         """
+
         init_pacman_position = np.where(self.map == Blocks.PACMAN.id)
         for pos in zip(*init_pacman_position): #only one iteration
             self.pacman = Pacman(pos, self.map)
@@ -195,7 +196,7 @@ class Environment():
             direction (Movements): Direction in that Pacman should move
 
         Returns:
-            Tuple[int, np.array, bool]:
+            tuple[int, np.array, bool]:
                 [0]: reward (0: no coin collected, 1: coin collected)
                 [1]: current state of the map
                 [2]: true if simulation is done
