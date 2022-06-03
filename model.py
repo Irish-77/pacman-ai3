@@ -6,7 +6,11 @@ from options import Movements
 
 class DQModelWithCNN(nn.Module):
 
-    def __init__(self, device:torch.device, height: int = 21, width: int = 31, number_of_actions: int = 4):
+    def __init__(self,
+                device:torch.device,
+                height: int = 21,
+                width: int = 31,
+                number_of_actions: int = 4):
         self.device = device
         self.height = height
         self.width = width
