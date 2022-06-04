@@ -1,6 +1,6 @@
 import numpy as np
 
-from model import DQModelWithCNN
+from model import BaseDQModel
 from options import Movement, Movements
 
 class Agent():
@@ -8,7 +8,7 @@ class Agent():
     """
 
     def __init__(self,
-                model:DQModelWithCNN,
+                model:BaseDQModel,
                 init_epsilon:float=0.99,
                 epsilon_decay:float=0.997,
                 epsilon_min:float=0.05) -> None:
@@ -23,7 +23,7 @@ class Agent():
         hence the model is used with more frequency. 
 
         Args:
-            model (DQModelWithCNN):
+            model (BaseDQModel):
                 Model that is used for predicting the new directions
             init_epsilon (float, optional):
                 Initial value for epsilon. Defaults to 0.99.
