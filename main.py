@@ -83,7 +83,7 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
 
     id = id if id is not None else get_date_as_string()
 
-    # writer = SummaryWriter(f'tensorboard/{id}')
+    writer = SummaryWriter(f'tensorboard/{id}')
     logger = get_logger(id, debug)
     logger.info(f'''Hyperparameters: 
                    \t num_episodes: {num_episodes}
