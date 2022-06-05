@@ -17,7 +17,11 @@ class Environment():
     """
 
     def __init__(self,
-                path:str='map.csv') -> None:
+                path:str='map.csv',
+                reward_for_coin:int=1,
+                reward_for_step:int=0,
+                reward_for_inactive:int=0,
+                reward_for_hit:int=-1) -> None:
 
         """Constructor for the environment
 
@@ -32,7 +36,15 @@ class Environment():
 
         Args:
             path (str, optional): Path to the map. Defaults to 'map.csv'.
+
+        TODO: params later
         """
+
+        # Initializing rewards
+        self.reward_for_coin = reward_for_coin
+        self.reward_for_step = reward_for_step
+        self.reward_for_inactive = reward_for_inactive
+        self.reward_for_hit = reward_for_hit
         
         # Initializing objects
         self.init_map = self.load_map(path)
@@ -192,7 +204,8 @@ class Environment():
 
         During the step method, the ghosts and Pacman are set to the new
         position. In addition, a check is made to see if the simulation is
-        complete. Furthermore, the map is updated afterwards.
+        complete. Furthermore, the map is updated afterwards. The specified
+        metrics for the reward are also passed to the reward function.
 
         Args:
             direction (Movements): Direction in that Pacman should move
@@ -205,19 +218,68 @@ class Environment():
         """
         self.current_steps += 1
 
-        self.pacman.move(direction)
-        done = self.check_collision()
-        if not done:
+        collision_by_pacman = False
+        collision_by_ghosts = False
+
+        has_moved = self.pacman.move(direction)
+
+        collision_by_pacman = self.check_collision()
+        
+
+        if not collision_by_pacman:
             for ghost in self.ghosts:
                 ghost.move()
-            done = self.is_done()
 
-        reward = self.update_map()
+        collision_by_ghosts = self.check_collision()
+
+        done = self.is_done()
+
+        collected_a_coin = self.update_map()
+
+        # calculates the reward for the current iteration
+        reward = self.get_reward(
+            (collision_by_pacman or collision_by_ghosts),
+            has_moved,
+            collected_a_coin,
+        )
 
         return reward, self.map, done
 
+
+    def get_reward(self,
+                collision:bool=False,
+                has_moved:bool=False,
+                collected_a_coin:bool=False) -> int:
+        """Calculates reward for the agent
+
+        Args:
+            collision (bool, optional):
+                Did Pacman collide with one of the ghosts? Defaults to False.
+            has_moved (bool, optional):
+                Has Pacman changed his position compared to the previous step?
+                Defaults to False.
+            collected_a_coin (bool, optional):
+                Did Pacman collected a coin? Defaults to False.
+
+        Returns:
+            int: amount of the reward
+        """
+
+        # negative reward for each time step; guranteed
+        reward = self.reward_for_step
+
+        # negative reward for not changing the position
+        reward += self.reward_for_inactive if not has_moved else 0
+
+        # positive reward for collecting a coin
+        reward += self.reward_for_coin if collected_a_coin else 0
+
+        # negative reward for hitting/crashing into a ghost
+        reward += self.reward_for_hit if collision else 0
+
+        return reward
     
-    def update_map(self) -> int:
+    def update_map(self) -> bool:
         """Updates the map after each iteration
 
         This method updates all positions of all mutable objects on the map. To
@@ -229,7 +291,7 @@ class Environment():
         field as well, accordingly this position is reseted too.  
 
         Returns:
-            int: reward for Pacmans new position
+            bool: True if Pacman collected a coin; otherwise False
         """
 
         # resets all old positions to default empty fields
@@ -263,15 +325,15 @@ class Environment():
 
     def get_field_id(self,
                     current_pos:np.array,
-                    change_state:bool = False) -> int:
-        """Returns the value of a current position on the map
+                    change_state:bool = False) -> bool:
+        """Returns the truth value if Pacman stepped on a coin field
 
         After each new move of Pacman it is checked if Pacman is on a field
         where there is a coin located. If this is the case and the flag variable
         ´change_state´ is set to true, the coin is picked up by Pacman, which
-        corresponds to removing the coin from the list. In addition, 1 is
-        returned, which indicates a positive outcome. Otherwise 0 is returned,
-        which means that no coin was collected.
+        corresponds to removing the coin from the list. In addition, True is
+        returned, which indicates a positive outcome. Otherwise False is
+        returned, which means that no coin was collected.
 
         Args:
             current_pos (np.array):
@@ -281,7 +343,7 @@ class Environment():
                 Pacman can collect the reward only once. Defaults to False.
 
         Returns:
-            int: value of the field (0: no coin collected, 1: coin collected)
+            bool: True if Pacman collected a coin; otherwise False
         """
 
         for coin in self.coins:
@@ -289,8 +351,8 @@ class Environment():
                (current_pos[1] == coin.position[1]):
                 if change_state:
                    self.coins.remove(coin)
-                return 1
-        return 0
+                return True
+        return False
 
     def get_collected_points(self) -> int:
         """Returns the number of collected points by Pacman
@@ -304,7 +366,7 @@ class Environment():
         """
         return self.max_coins - len(self.coins)
 
-    def get_patches(self) -> tuple[mpatches.Patch]:
+    def get_patches(self) -> tuple[mpatches.Patch, mpatches.Patch]:
         """Returns patches that are displayed within the GUI
         
         Within the patches the current number of steps and the points so far
@@ -312,7 +374,7 @@ class Environment():
         are displayed in the upper right corner of the GUI.
 
         Returns:
-            tuple[mpatches.Patch]:
+            tuple[mpatches.Patch, mpatches.Patch]:
                 tuple containing two patches: one for current step (iteration)
                 and the second one for the achieved points so far  
         """

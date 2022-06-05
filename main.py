@@ -9,22 +9,27 @@ import torch.optim as optim
 from datetime import datetime
 from itertools import count
 from os.path import join
+from typing import Union
 from torch.utils.tensorboard import SummaryWriter
 
 from agent import Agent
 from environment import Environment
-from model import DQModelWithCNN
+from model import DQModelWithoutCNN
 from recorder import Recorder
 from replay_buffer import ReplayBuffer
 
 # Allow duplicate initialization within conda.
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-def train(map:str, id:str=None, show:bool=True, record:bool=True,
+def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
     debug:bool=True, num_episodes:int=1000, target_update:int=25,
     save_state:int=50, batch_size:int=200, max_replay_size:int=1e4,
     gamma:float=0.99, init_epsilon:float=0.99, epsilon_decay:float=0.997,
-    epsilon_min:float=0.05, lr:float=1e-4) -> None:
+    epsilon_min:float=0.05, lr:float=1e-4, reward_for_coin:int=1,
+    reward_for_step:int=0, reward_for_inactive:int=0,
+    reward_for_hit:int=-1, use_pretrained:bool=False,
+    last_episode:int=0) -> None:
+
     """Train a new reinforcement learning for the Pacman environment
 
     Args:
@@ -61,11 +66,24 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
         epsilon_min (float, optional): The minimum value for the epsilon.
             Defaults to 0.05.
         lr (float, optional): Learning rate for the optimizer. Defaults to 1e-4.
+        reward_for_coin (int, optional): Reward for the agent when collecting a
+            coin. Defaults to 1.
+        reward_for_step (int, optional): Reward for the agent after performing a
+            step (a step equals a time step). Defaults to 0.
+        reward_for_inactive (int, optional): Reward for the agent if he runs
+            into a wall and therefore won't change his position. Defaults to 0.
+        reward_for_hit (int, optional): Reward for the agent when colliding with
+            ghosts. Defaults to -1.
+        use_pretrained (bool, optional): Continue training with a pretrained
+            model. Defaults to False.
+        last_episode (int, optional): Specifies the epsiode of which the
+            training will continue. Defaults to 0.
     """
+
 
     id = id if id is not None else get_date_as_string()
 
-    writer = SummaryWriter(f'tensorboard/{id}')
+    # writer = SummaryWriter(f'tensorboard/{id}')
     logger = get_logger(id, debug)
     logger.info(f'''Hyperparameters: 
                    \t num_episodes: {num_episodes}
@@ -77,20 +95,42 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
                    \t epsilon_decay: {epsilon_decay}
                    \t epsilon_min: {epsilon_min}
                    \t learning_rate: {lr}
+                   \t reward_for_coin: {reward_for_coin}
+                   \t reward_for_step: {reward_for_step}
+                   \t reward_for_inactive: {reward_for_inactive}
+                   \t reward_for_hit: {reward_for_hit}
+                   \t use_pretrained: {use_pretrained}
+                   \t last_episode: {last_episode}
                     ''')
+
+    env = Environment(path=join('maps', map),
+        reward_for_coin=reward_for_coin,
+        reward_for_step=reward_for_step,
+        reward_for_inactive=reward_for_inactive,
+        reward_for_hit=reward_for_hit)
+    map_size = env.map.shape
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    train_agent = Agent(model=DQModelWithCNN(device).to(device),
+    train_model = DQModelWithoutCNN(device, height=map_size[0],
+        width=map_size[1])
+    target_model = DQModelWithoutCNN(device, height=map_size[0],
+        width=map_size[1])
+
+    if use_pretrained:
+        train_model.load(f'{id}_{last_episode}')
+    target_model.load_state_dict(train_model.state_dict())
+    
+    train_agent = Agent(model=train_model.to(device),
         init_epsilon=init_epsilon, epsilon_min=epsilon_min,
         epsilon_decay=epsilon_decay)
-    target_agent = Agent(model=DQModelWithCNN(device).to(device),
+    target_agent = Agent(model=target_model.to(device),
         init_epsilon=init_epsilon, epsilon_min=epsilon_min,
         epsilon_decay=epsilon_decay)
     replay_buffer = ReplayBuffer(min_size=batch_size,
         max_size=max_replay_size, batch_size=batch_size, device=device)
-    env = Environment(path=join('maps', map))
-    optimizer = optim.RMSprop(train_agent.model.parameters(), lr=lr)
+
+    optimizer = optim.Adam(train_agent.model.parameters(), lr=lr)
     if record:
         recorder = Recorder()
 
@@ -99,7 +139,7 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
     acc_rewards = []
     avg_losses = []
 
-    for e in range(num_episodes):
+    for e in range(last_episode+1, last_episode+num_episodes+1):
 
         losses = []
         acc_reward = 0
@@ -135,7 +175,6 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
             if batch is not None:
                 non_final_mask, non_final_next_states, state_batch, \
                     action_batch, reward_batch = batch
-
                 state_action_values = train_agent.model(state_batch) \
                     .gather(1, action_batch)
                 next_state_values = torch.zeros(batch_size, device=device)
@@ -183,7 +222,7 @@ def train(map:str, id:str=None, show:bool=True, record:bool=True,
                 recorder.close_recording()
 
         if e % target_update == 0:
-            target_agent.model.load_state_dict(train_agent.model.state_dict())
+            target_agent.model.load_state_dict(train_agent.model.state_dict().copy())
 
 def get_logger(id:str, debug:bool = False) -> logging.Logger:
     """Retrieve logger
@@ -253,7 +292,7 @@ def play(map:str, model_name:str = None, show:bool=True,
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = DQModelWithCNN(device)
+    model = DQModelWithoutCNN(device)
     if model_name is None:
         model_name = get_latest_model_name()
         print(f'No model specified. Using latest model: {model_name}.')
@@ -331,6 +370,25 @@ if __name__ == '__main__':
     parser.add_argument('-lr', '--learning-rate', default=1e-4, type=float,
         help='Learning rate for the optimizer. This only applies for mode '
         '\'train\'.', dest='learning_rate')
+    parser.add_argument('-rfc', '--reward-for-coin', default=1, type=int,
+        help='Reward for collecting a coin. This only applies for mode '
+        '\'train\'.', dest='reward_for_coin')
+    parser.add_argument('-rfs', '--reward-for-step', default=0, type=int,
+        help='Reward for performing a step. This only applies for mode '
+        '\'train\'.', dest='reward_for_step')
+    parser.add_argument('-rfi', '--reward-for-inactive', default=0, type=int,
+        help='Reward for no movement. This only applies for mode '
+        '\'train\'.',dest='reward_for_inactive')
+    parser.add_argument('-rfh', '--reward-for-hit', default=-1, type=int,
+        help='Reward for hitting a ghost. This only applies for mode '
+        '\'train\'.',dest='reward_for_hit')
+    parser.add_argument('-up', '--use-pretrained', action='store_true', 
+        help='Continue training with pretrained model. This only applies for '
+        'mode \'train\'.', dest='use_pretrained')
+    parser.add_argument('-le', '--last-episode', default=0, type=int, 
+        help='Continue training from last_episode. This only applies for mode'
+        '\'train\'.', dest='last_episode')
+ 
     args = parser.parse_args()
 
     if args.mode == 'play':
@@ -342,4 +400,10 @@ if __name__ == '__main__':
             batch_size=args.batch_size, max_replay_size=args.max_replay_size,
             gamma=args.gamma, init_epsilon=args.init_epsilon, debug=args.debug,
             epsilon_decay=args.epsilon_decay, epsilon_min=args.epsilon_min,
-            save_state=args.save_state, lr=args.learning_rate)
+            save_state=args.save_state, lr=args.learning_rate,
+            reward_for_coin = args.reward_for_coin,
+            reward_for_step = args.reward_for_step,
+            reward_for_inactive = args.reward_for_inactive,
+            reward_for_hit = args.reward_for_hit,
+            use_pretrained=args.use_pretrained, last_episode=args.last_episode
+            )
