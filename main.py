@@ -25,9 +25,9 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
     debug:bool=True, num_episodes:int=1000, target_update:int=25,
     save_state:int=50, batch_size:int=200, max_replay_size:int=1e4,
     gamma:float=0.99, init_epsilon:float=0.99, epsilon_decay:float=0.997,
-    epsilon_min:float=0.05, lr:float=1e-4, reward_for_coin:int=1,
-    reward_for_step:int=0, reward_for_inactive:int=0,
-    reward_for_hit:int=-1, use_pretrained:bool=False,
+    epsilon_min:float=0.05, lr:float=1e-4, reward_for_coin:float=1,
+    reward_for_step:float=0, reward_for_inactive:float=0,
+    reward_for_hit:float=-1, use_pretrained:bool=False,
     last_episode:int=0) -> None:
 
     """Train a new reinforcement learning for the Pacman environment
@@ -66,14 +66,14 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
         epsilon_min (float, optional): The minimum value for the epsilon.
             Defaults to 0.05.
         lr (float, optional): Learning rate for the optimizer. Defaults to 1e-4.
-        reward_for_coin (int, optional): Reward for the agent when collecting a
-            coin. Defaults to 1.
-        reward_for_step (int, optional): Reward for the agent after performing a
-            step (a step equals a time step). Defaults to 0.
-        reward_for_inactive (int, optional): Reward for the agent if he runs
+        reward_for_coin (float, optional): Reward for the agent when collecting
+            a coin. Defaults to 1.
+        reward_for_step (float, optional): Reward for the agent after performing
+            a step (a step equals a time step). Defaults to 0.
+        reward_for_inactive (float, optional): Reward for the agent if he runs
             into a wall and therefore won't change his position. Defaults to 0.
-        reward_for_hit (int, optional): Reward for the agent when colliding with
-            ghosts. Defaults to -1.
+        reward_for_hit (float, optional): Reward for the agent when colliding
+            with ghosts. Defaults to -1.
         use_pretrained (bool, optional): Continue training with a pretrained
             model. Defaults to False.
         last_episode (int, optional): Specifies the epsiode of which the
@@ -154,7 +154,7 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
                 torch.tensor(np.array([[observation]]), dtype=torch.float))
             reward, next_observation, done = env.step(action)
             acc_reward += reward
-
+            
             if show:
                 env.show()
             
@@ -212,7 +212,7 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
         if (e % save_state == 0):
             logger.info((f'episode: {e:6d} | #steps: {np.mean(steps):9.5f} | '
                 f'avg loss: {np.mean(avg_losses):9.5f} | acc reward: '
-                f'{np.mean(acc_rewards):9.5f} | epsilon: '
+                f'{np.mean(acc_rewards):7.2f} | epsilon: '
                 f'{train_agent.epsilon:7.5f}'))
             steps = []
             acc_rewards = []
@@ -370,16 +370,16 @@ if __name__ == '__main__':
     parser.add_argument('-lr', '--learning-rate', default=1e-4, type=float,
         help='Learning rate for the optimizer. This only applies for mode '
         '\'train\'.', dest='learning_rate')
-    parser.add_argument('-rfc', '--reward-for-coin', default=1, type=int,
+    parser.add_argument('-rfc', '--reward-for-coin', default=1, type=float,
         help='Reward for collecting a coin. This only applies for mode '
         '\'train\'.', dest='reward_for_coin')
-    parser.add_argument('-rfs', '--reward-for-step', default=0, type=int,
+    parser.add_argument('-rfs', '--reward-for-step', default=0, type=float,
         help='Reward for performing a step. This only applies for mode '
         '\'train\'.', dest='reward_for_step')
-    parser.add_argument('-rfi', '--reward-for-inactive', default=0, type=int,
+    parser.add_argument('-rfi', '--reward-for-inactive', default=0, type=float,
         help='Reward for no movement. This only applies for mode '
         '\'train\'.',dest='reward_for_inactive')
-    parser.add_argument('-rfh', '--reward-for-hit', default=-1, type=int,
+    parser.add_argument('-rfh', '--reward-for-hit', default=-1, type=float,
         help='Reward for hitting a ghost. This only applies for mode '
         '\'train\'.',dest='reward_for_hit')
     parser.add_argument('-up', '--use-pretrained', action='store_true', 

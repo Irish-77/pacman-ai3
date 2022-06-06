@@ -18,10 +18,10 @@ class Environment():
 
     def __init__(self,
                 path:str='map.csv',
-                reward_for_coin:int=1,
-                reward_for_step:int=0,
-                reward_for_inactive:int=0,
-                reward_for_hit:int=-1) -> None:
+                reward_for_coin:float=1,
+                reward_for_step:float=0,
+                reward_for_inactive:float=0,
+                reward_for_hit:float=-1) -> None:
 
         """Constructor for the environment
 
@@ -199,7 +199,7 @@ class Environment():
 
     def step(self,
             direction:Movements
-            ) -> tuple[int, np.array, bool]:
+            ) -> tuple[float, np.array, bool]:
         """Performs a new iteration within current simulation
 
         During the step method, the ghosts and Pacman are set to the new
@@ -211,7 +211,7 @@ class Environment():
             direction (Movements): Direction in that Pacman should move
 
         Returns:
-            tuple[int, np.array, bool]:
+            tuple[float, np.array, bool]:
                 [0]: reward (0: no coin collected, 1: coin collected)
                 [1]: current state of the map
                 [2]: true if simulation is done
@@ -249,7 +249,7 @@ class Environment():
     def get_reward(self,
                 collision:bool=False,
                 has_moved:bool=False,
-                collected_a_coin:bool=False) -> int:
+                collected_a_coin:bool=False) -> float:
         """Calculates reward for the agent
 
         Args:
@@ -262,7 +262,7 @@ class Environment():
                 Did Pacman collected a coin? Defaults to False.
 
         Returns:
-            int: amount of the reward
+            float: amount of the reward
         """
 
         # negative reward for each time step; guranteed
