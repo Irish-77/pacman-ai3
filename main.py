@@ -27,8 +27,9 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
     gamma:float=0.99, init_epsilon:float=0.99, epsilon_decay:float=0.997,
     epsilon_min:float=0.05, lr:float=1e-4, reward_for_coin:float=1,
     reward_for_step:float=0, reward_for_inactive:float=0,
-    reward_for_hit:float=-1, use_pretrained:bool=False,
-    last_episode:int=0) -> None:
+    reward_for_hit:float=-1, reward_for_win:float=10,
+    reward_for_max_steps:float=-1, use_pretrained:bool=False,
+    max_steps:int=1000, percentage_coins:float=1, last_episode:int=0) -> None:
 
     """Train a new reinforcement learning for the Pacman environment
 
@@ -72,14 +73,22 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
             a step (a step equals a time step). Defaults to 0.
         reward_for_inactive (float, optional): Reward for the agent if he runs
             into a wall and therefore won't change his position. Defaults to 0.
+        reward_for_win (float, optional): Reward for collecting all coins and
+            therefore winning. Defaults to 10.
+        reward_for_max_steps (float, optional): Reward for reaching max amount
+            of steps. Defaults to -1.
         reward_for_hit (float, optional): Reward for the agent when colliding
             with ghosts. Defaults to -1.
         use_pretrained (bool, optional): Continue training with a pretrained
             model. Defaults to False.
         last_episode (int, optional): Specifies the epsiode of which the
             training will continue. Defaults to 0.
+        max_steps (int, optional): Max amount of steps possible until episode is
+            cut off. Defaults to 1000.
+        percentage_coins (float, optional): Probability that an empty field will
+            contain a coin at start. The coins are generated newly each episode.
+            Defaults to 1.
     """
-
 
     id = id if id is not None else get_date_as_string()
 
@@ -99,15 +108,24 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
                    \t reward_for_step: {reward_for_step}
                    \t reward_for_inactive: {reward_for_inactive}
                    \t reward_for_hit: {reward_for_hit}
+                   \t reward_for_max_steps: {reward_for_max_steps}
+                   \t reward_for_win: {reward_for_win}
+                   \t max_steps: {max_steps}
+                   \t percentage_coins: {percentage_coins}
                    \t use_pretrained: {use_pretrained}
                    \t last_episode: {last_episode}
                     ''')
 
     env = Environment(path=join('maps', map),
+        max_steps=max_steps,
+        percentage_coins=percentage_coins,
         reward_for_coin=reward_for_coin,
         reward_for_step=reward_for_step,
         reward_for_inactive=reward_for_inactive,
-        reward_for_hit=reward_for_hit)
+        reward_for_hit=reward_for_hit,
+        reward_for_max_steps=reward_for_max_steps,
+        reward_for_win=reward_for_win
+        )
     map_size = env.map.shape
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -222,7 +240,8 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
                 recorder.close_recording()
 
         if e % target_update == 0:
-            target_agent.model.load_state_dict(train_agent.model.state_dict().copy())
+            target_agent.model.load_state_dict(
+                train_agent.model.state_dict().copy())
 
 def get_logger(id:str, debug:bool = False) -> logging.Logger:
     """Retrieve logger
@@ -275,7 +294,7 @@ def get_date_as_string() -> str:
     return datetime.today().strftime("%Y_%m_%d_%H_%M_%S")
 
 def play(map:str, model_name:str = None, show:bool=True,
-    record:bool=True) -> None:
+    record:bool=True, max_steps:int=1000, percentage_coins:float=1) -> None:
     """Run an episode of the Pacman environment
 
     Args:
@@ -289,6 +308,10 @@ def play(map:str, model_name:str = None, show:bool=True,
             plays it. Defaults to True.
         record (bool, optional): Whether to record a video of the environment
             while the agent is playing it. Defaults to True.
+        max_steps (int, optional): Max amount of steps possible until episode is
+            cut off.
+        percentage_coins (float, optional): Probability that an empty field will
+            contain a coin at start. The coins are generated newly each episode.
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -299,7 +322,8 @@ def play(map:str, model_name:str = None, show:bool=True,
     model.load(model_name)
     agent = Agent(model=model.to(device))
 
-    env = Environment(path=join('maps', map))
+    env = Environment(path=join('maps', map), max_steps=max_steps,
+        percentage_coins=percentage_coins)
     observation = env.reset()
     if record:
         recorder = Recorder()
@@ -378,10 +402,21 @@ if __name__ == '__main__':
         '\'train\'.', dest='reward_for_step')
     parser.add_argument('-rfi', '--reward-for-inactive', default=0, type=float,
         help='Reward for no movement. This only applies for mode '
-        '\'train\'.',dest='reward_for_inactive')
+        '\'train\'.', dest='reward_for_inactive')
     parser.add_argument('-rfh', '--reward-for-hit', default=-1, type=float,
         help='Reward for hitting a ghost. This only applies for mode '
-        '\'train\'.',dest='reward_for_hit')
+        '\'train\'.', dest='reward_for_hit')
+    parser.add_argument('-rfw', '--reward-for-win', default=10, type=float,
+        help='Reward for collecting all coins. This only applies for mode '
+        '\'train\'.', dest='reward_for_win')
+    parser.add_argument('-rfms', '--reward-for-max-steps', default=-1,
+        type=float, help='Reward for reaching max amount of steps. This only '
+        'applies for mode \'train\'.', dest='reward_for_max_steps')
+    parser.add_argument('-ms', '--max-steps', default=1000, type=int,
+        help='Max amount of steps possible.', dest='max_steps')
+    parser.add_argument('-pc', '--percentage-coins', default=1,
+        type=float, help='Percentage of randomly generated coins on empty '
+        'fields.', dest='percentage_coins')
     parser.add_argument('-up', '--use-pretrained', action='store_true', 
         help='Continue training with pretrained model. This only applies for '
         'mode \'train\'.', dest='use_pretrained')
@@ -393,7 +428,8 @@ if __name__ == '__main__':
 
     if args.mode == 'play':
         play(map=args.map, model_name=args.id, show=args.show,
-            record=args.record)
+            record=args.record, max_steps=args.max_steps,
+            percentage_coins=args.percentage_coins)
     else:
         train(map=args.map, id=args.id, show=args.show, record=args.record,
             num_episodes=args.num_episodes, target_update=args.target_update,
@@ -401,9 +437,11 @@ if __name__ == '__main__':
             gamma=args.gamma, init_epsilon=args.init_epsilon, debug=args.debug,
             epsilon_decay=args.epsilon_decay, epsilon_min=args.epsilon_min,
             save_state=args.save_state, lr=args.learning_rate,
-            reward_for_coin = args.reward_for_coin,
-            reward_for_step = args.reward_for_step,
-            reward_for_inactive = args.reward_for_inactive,
-            reward_for_hit = args.reward_for_hit,
-            use_pretrained=args.use_pretrained, last_episode=args.last_episode
-            )
+            reward_for_coin=args.reward_for_coin,
+            reward_for_step=args.reward_for_step,
+            reward_for_inactive=args.reward_for_inactive,
+            reward_for_hit=args.reward_for_hit,
+            reward_for_win=args.reward_for_win,
+            reward_for_max_steps=args.reward_for_max_steps,
+            use_pretrained=args.use_pretrained, last_episode=args.last_episode,
+            max_steps=args.max_steps, percentage_coins=args.percentage_coins)

@@ -18,10 +18,14 @@ class Environment():
 
     def __init__(self,
                 path:str='map.csv',
+                max_steps:int=1000,
+                percentage_coins:float=0.8,
                 reward_for_coin:float=1,
                 reward_for_step:float=0,
                 reward_for_inactive:float=0,
-                reward_for_hit:float=-1) -> None:
+                reward_for_hit:float=-1,
+                reward_for_win:float=10,
+                reward_for_max_steps:float=-1) -> None:
 
         """Constructor for the environment
 
@@ -36,8 +40,24 @@ class Environment():
 
         Args:
             path (str, optional): Path to the map. Defaults to 'map.csv'.
-
-        TODO: params later
+            max_steps (int, optional): Max amount of steps possible until
+                episode is cut off. Defaults to 1000.
+            percentage_coins (float, optional): Probability that an empty field
+                will contain a coin at start. The coins are generated newly each
+                episode. Defaults to 1.
+            reward_for_coin (float, optional): Reward for the agent when
+                collecting a coin. Defaults to 1.
+            reward_for_step (float, optional): Reward for the agent after
+                performing a step (a step equals a time step). Defaults to 0.
+            reward_for_inactive (float, optional): Reward for the agent if he
+                runs into a wall and therefore won't change his position.
+                Defaults to 0.
+            reward_for_hit (float, optional): Reward for the agent when
+                colliding with ghosts. Defaults to -1.
+            reward_for_win (float, optional): Reward for collecting all coins
+                and therefore winning. Defaults to 10.
+            reward_for_max_steps (float, optional): Reward for reaching max
+                amount of steps. Defaults to -1.
         """
 
         # Initializing rewards
@@ -45,6 +65,8 @@ class Environment():
         self.reward_for_step = reward_for_step
         self.reward_for_inactive = reward_for_inactive
         self.reward_for_hit = reward_for_hit
+        self.reward_for_win = reward_for_win
+        self.reward_for_max_steps = reward_for_max_steps
         
         # Initializing objects
         self.init_map = self.load_map(path)
@@ -54,8 +76,9 @@ class Environment():
         self.pacman = None
 
         # Initializing game related measures
+        self.max_steps = max_steps
+        self.percentage_coins = percentage_coins
         self.max_coins = 0
-        self.max_steps = 1000
         self.current_steps = 0
         
         # Initializing visuals for the GUI
@@ -111,7 +134,7 @@ class Environment():
 
         random_matrix = np.random.rand(*self.map.shape)
         self.map = np.where(((self.map == Blocks.EMPTY.id) & \
-                            (random_matrix > 0.2)),
+                            (random_matrix > (1 - self.percentage_coins))),
                             Blocks.COIN.id, self.map)
         init_coins_position = np.where(self.map == Blocks.COIN.id)
         self.coins = []
@@ -148,22 +171,6 @@ class Environment():
             self.ghosts.append(
                 Ghost(start_pos=np.array(pos), map=self.map)
             )
-        
-    def is_done(self) -> bool:
-        """Checks if current simulation is done
-
-        The current simulation is done when one of the following three
-        conditions are met (true):
-        1. The maximum number of defined steps was exceeded,
-        2. Pacman has collided with a ghost, or
-        3. all coins have been collected by Pacman.
-
-        Returns:
-            bool: true if current simulation is done
-        """
-        return  self.check_steps() or \
-                self.check_collision() or \
-                self.check_coins()
 
     def check_steps(self) -> bool:
         """Checks if maximum number of defined steps was exceeded 
@@ -204,94 +211,71 @@ class Environment():
 
         During the step method, the ghosts and Pacman are set to the new
         position. In addition, a check is made to see if the simulation is
-        complete. Furthermore, the map is updated afterwards. The specified
-        metrics for the reward are also passed to the reward function.
+        complete. Furthermore, the map is updated afterwards. The reward is
+        calculated according to the assigned values.
 
         Args:
             direction (Movements): Direction in that Pacman should move
 
         Returns:
             tuple[float, np.array, bool]:
-                [0]: reward (0: no coin collected, 1: coin collected)
+                [0]: reward depending on the assigned values
                 [1]: current state of the map
                 [2]: true if simulation is done
         """
         self.current_steps += 1
-
-        collision_by_pacman = False
-        collision_by_ghosts = False
-
-        has_moved = self.pacman.move(direction)
-
-        collision_by_pacman = self.check_collision()
-        
-
-        if not collision_by_pacman:
-            for ghost in self.ghosts:
-                ghost.move()
-
-        collision_by_ghosts = self.check_collision()
-
-        done = self.is_done()
-
-        collected_a_coin = self.update_map()
-
-        # calculates the reward for the current iteration
-        reward = self.get_reward(
-            (collision_by_pacman or collision_by_ghosts),
-            has_moved,
-            collected_a_coin,
-        )
-
-        return reward, self.map, done
-
-
-    def get_reward(self,
-                collision:bool=False,
-                has_moved:bool=False,
-                collected_a_coin:bool=False) -> float:
-        """Calculates reward for the agent
-
-        Args:
-            collision (bool, optional):
-                Did Pacman collide with one of the ghosts? Defaults to False.
-            has_moved (bool, optional):
-                Has Pacman changed his position compared to the previous step?
-                Defaults to False.
-            collected_a_coin (bool, optional):
-                Did Pacman collected a coin? Defaults to False.
-
-        Returns:
-            float: amount of the reward
-        """
-
-        # negative reward for each time step; guranteed
         reward = self.reward_for_step
 
-        # negative reward for not changing the position
+        has_moved = self.pacman.move(direction)
         reward += self.reward_for_inactive if not has_moved else 0
 
-        # positive reward for collecting a coin
+        # Termination criteria: lose.
+        collision_by_pacman = self.check_collision()
+        reward += self.reward_for_hit if collision_by_pacman else 0
+        
+        collected_a_coin = self.get_field_id(self.pacman.current_pos,
+                                            change_state=True)
         reward += self.reward_for_coin if collected_a_coin else 0
 
-        # negative reward for hitting/crashing into a ghost
-        reward += self.reward_for_hit if collision else 0
+        max_steps_reached = False
+        collision_by_ghosts = False
+        has_won = False
 
-        return reward
+        # This creates an order of which criteria is more dominant towards the
+        # termination of the episode: collision_by_pacman > has_won >
+        # collision_by_ghosts > max_steps_reached.
+        if not collision_by_pacman:
+            # Termination criteria: win.
+            has_won = self.check_coins()
+            reward += self.reward_for_win if has_won else 0
+
+            if not has_won:
+                for ghost in self.ghosts:
+                    ghost.move()
+                
+                # Termination criteria: lose. Collision reward os only added one
+                # time.
+                collision_by_ghosts = self.check_collision()
+                reward += self.reward_for_hit if collision_by_ghosts else 0
+
+                # Termination criteria: lose.
+                if not collision_by_ghosts:
+                    max_steps_reached = self.check_steps()
+                    reward += self.reward_for_max_steps if max_steps_reached \
+                        else 0
+
+        done = has_won or collision_by_ghosts or collision_by_pacman or \
+            max_steps_reached
+        self.update_map()
+
+        return reward, self.map, done
     
-    def update_map(self) -> bool:
+    def update_map(self) -> None:
         """Updates the map after each iteration
 
         This method updates all positions of all mutable objects on the map. To
         do this, the old positions are first overwritten and the fields are set
-        to empty. Then all objects are redrawn on the map. In addition, it is
-        checked whether Pacman is now set to Coin. If this is the case, 1 is
-        returned as reward. The field of the coin that Pacman has picked up does
-        not need to be reseted on the map, because Pacman is already on the same
-        field as well, accordingly this position is reseted too.  
-
-        Returns:
-            bool: True if Pacman collected a coin; otherwise False
+        to empty. Then all objects are redrawn on the map.
         """
 
         # resets all old positions to default empty fields
@@ -318,10 +302,7 @@ class Environment():
         # ========Pacman=======
         # set new postion
         current_pos = self.pacman.current_pos
-        field_id = self.get_field_id(current_pos, change_state = True)
         self.map[current_pos[0], current_pos[1]] = Blocks.PACMAN.id
-
-        return field_id
 
     def get_field_id(self,
                     current_pos:np.array,
@@ -380,7 +361,7 @@ class Environment():
         """
 
         points_patch = mpatches.Patch(color=Blocks.PACMAN.color,
-                        label=f'Pacman Points: {self.get_collected_points()}')
+                        label=f'Pacman Coins: {self.get_collected_points()}')
         
         steps_patch = mpatches.Patch(color=Blocks.PACMAN.color,
                         label=f'Pacman Steps: {self.current_steps}')
