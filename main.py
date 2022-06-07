@@ -14,12 +14,14 @@ from torch.utils.tensorboard import SummaryWriter
 
 from agent import Agent
 from environment import Environment
-from model import DQModelWithoutCNN
+from model import DQModelWithoutCNN, DQModelWithCNNNew
 from recorder import Recorder
 from replay_buffer import ReplayBuffer
 
 # Allow duplicate initialization within conda.
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
+MODEL = DQModelWithCNNNew
 
 def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
     debug:bool=True, num_episodes:int=1000, target_update:int=25,
@@ -130,10 +132,8 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    train_model = DQModelWithoutCNN(device, height=map_size[0],
-        width=map_size[1])
-    target_model = DQModelWithoutCNN(device, height=map_size[0],
-        width=map_size[1])
+    train_model = MODEL(device, height=map_size[0], width=map_size[1])
+    target_model = MODEL(device, height=map_size[0], width=map_size[1])
 
     if use_pretrained:
         train_model.load(f'{id}_{last_episode}')
@@ -315,7 +315,7 @@ def play(map:str, model_name:str = None, show:bool=True,
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = DQModelWithoutCNN(device)
+    model = MODEL(device)
     if model_name is None:
         model_name = get_latest_model_name()
         print(f'No model specified. Using latest model: {model_name}.')

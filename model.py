@@ -78,12 +78,15 @@ class DQModelWithoutCNN(BaseDQModel):
     def __init__(self, device:torch.device, height:int=21, width:int=31,
         number_of_actions:int=4) -> None:
 
-        super(DQModelWithoutCNN, self).__init__(device, height, width, number_of_actions)
-        self.fc1 = nn.Linear(in_features=(self.height * self.width), out_features=1024)
+        super(DQModelWithoutCNN, self).__init__(device, height, width,
+            number_of_actions)
+        self.fc1 = nn.Linear(in_features=(self.height * self.width),
+            out_features=1024)
         self.fc2 = nn.Linear(in_features=1024, out_features=2048)
         self.fc3 = nn.Linear(in_features=2048, out_features=1024)
         self.fc4 = nn.Linear(in_features=1024, out_features=512)
-        self.fc5 = nn.Linear(in_features=512, out_features=self.number_of_actions)
+        self.fc5 = nn.Linear(in_features=512,
+            out_features=self.number_of_actions)
    
     def forward(self, x):
         x = x.to(self.device)
@@ -110,7 +113,8 @@ class DQModelWithCNN(BaseDQModel):
                 take. Defaults to 4.
         """
 
-        super(DQModelWithCNN, self).__init__(device, height, width, number_of_actions)
+        super(DQModelWithCNN, self).__init__(device, height, width,
+            number_of_actions)
 
         self.conv1 = nn.Conv2d(1, 3, 3)
         self.pool = nn.MaxPool2d(2, 2)
@@ -118,6 +122,53 @@ class DQModelWithCNN(BaseDQModel):
         self.fc1 = nn.Linear(108, 50)
         self.fc2 = nn.Linear(50, 200)
         self.fc3 = nn.Linear(200, self.number_of_actions)
+
+    def forward(self, x:torch.Tensor) -> torch.Tensor:
+        """Forward Pass
+
+        Passes the inputs through the model.
+
+        Args:
+            x (torch.Tensor): Input for the model.
+
+        Returns:
+            torch.Tensor: Output predictions of the model. These are q-values as
+                in Deep Q-Networks.
+        """
+        x = x.to(self.device)
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = torch.flatten(x, 1)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+
+class DQModelWithCNNNew(BaseDQModel):
+    """Deep Q Neuronal Network with CNN"""
+
+    def __init__(self, device:torch.device, height:int=21, width:int=31,
+        number_of_actions:int=4) -> None:
+        """Constructor
+
+        Args:
+            device (torch.device): Device on which the computation will be done.
+            height (int, optional): Height of the input tensor. Defaults to 21.
+            width (int, optional): Width of the input tensor. Defaults to 31.
+            number_of_actions (int, optional): Number of possible actions to
+                take. Defaults to 4.
+        """
+
+        super(DQModelWithCNNNew, self).__init__(device, height, width,
+            number_of_actions)
+
+        self.pool = nn.MaxPool2d(2, 2) 
+        self.conv1 = nn.Conv2d(1, 16, 3) 
+        self.conv2 = nn.Conv2d(16, 32, 2)
+        self.fc1 = nn.Linear(4*32, 256)
+        self.fc2 = nn.Linear(256, 32)
+        self.fc3 = nn.Linear(32, self.number_of_actions)
 
     def forward(self, x:torch.Tensor) -> torch.Tensor:
         """Forward Pass
