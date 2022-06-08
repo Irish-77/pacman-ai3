@@ -3,5 +3,6 @@ __pycache__/
 *.gif
 *.model
 *.log
+*.csv
 tensorboard/*
 !tensorboard/.keep
