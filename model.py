@@ -119,7 +119,7 @@ class DQModelWithCNN(BaseDQModel):
         self.conv1 = nn.Conv2d(1, 3, 3)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(3, 6, 3)
-        self.fc1 = nn.Linear(108, 50)
+        self.fc1 = nn.Linear(24, 50)
         self.fc2 = nn.Linear(50, 200)
         self.fc3 = nn.Linear(200, self.number_of_actions)
 

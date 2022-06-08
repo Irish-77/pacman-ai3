@@ -14,14 +14,14 @@ from torch.utils.tensorboard import SummaryWriter
 
 from agent import Agent
 from environment import Environment
-from model import DQModelWithoutCNN, DQModelWithCNNNew
+from model import DQModelWithoutCNN, DQModelWithCNNNew, DQModelWithCNN
 from recorder import Recorder
 from replay_buffer import ReplayBuffer
 
 # Allow duplicate initialization within conda.
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
-MODEL = DQModelWithCNNNew
+MODEL = DQModelWithCNN
 
 def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
     debug:bool=True, num_episodes:int=1000, target_update:int=25,
@@ -223,9 +223,9 @@ def train(map:str, id:Union[None, str]=None, show:bool=True, record:bool=True,
         acc_rewards.append(acc_reward)
         avg_losses.append(mean_loss)
 
-
-        writer.add_scalars('pacman', tag_scalar_dict={'episode': e, 'steps': i,
-            'avg_loss': mean_loss, 'acc_reward': acc_reward}, global_step=e)
+        writer.add_scalar('acc_reward', acc_reward, global_step=e)
+        writer.add_scalar('steps', i, global_step=e)
+        writer.add_scalar('avg_loss', mean_loss, global_step=e)
 
         if (e % save_state == 0):
             logger.info((f'episode: {e:6d} | #steps: {np.mean(steps):9.5f} | '
