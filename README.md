@@ -69,4 +69,6 @@ python main.py -id Random -m train -map small_map_quadratic.csv -ne 5000 -tu 50 
 
 ![Rewards per Episode](img/rewards_per_episode_windows.png)
 
+The 'DQModelWithCNN' and 'DQModelWithCNNNew' models differ in the number of hidden and convolutional layers and their hyperparameters. Open [model.py](model.py) For a detailed look at the differences.
+
 The picture shows that the model without CNN performs better than the models with CNN on the first 5000 episodes. However, it also shows that the models in the further course of the training have quite a chance to become better than the model without CNN. Furthermore, it is shown that all models perform better already at the beginning than the completely random choice of action.
