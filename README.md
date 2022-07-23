@@ -2,7 +2,7 @@
 
 This project aims to create a Pac-Man environment for reinforcement learning and solve this environment by applying Deep Q-Networks.
 
-https://user-images.githubusercontent.com/52852098/180603840-3ee2cff9-20e2-40e5-9588-7a3809f49253.mp4
+[![Pacman RL in Action](https://img.youtube.com/vi/PJC1XdCUf2I/0.jpg)](https://youtu.be/PJC1XdCUf2I)
 
 ## Environment
 The Pac-Man environment is built up on customized maps which can be found inside the 'map' folder. Each number maps to a specific part of the environment as follows:
