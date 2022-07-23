@@ -2,6 +2,7 @@
 
 This project aims to create a Pac-Man environment for reinforcement learning and solve this environment by applying Deep Q-Networks.
 
+## Results (Click on the image below to be redirected to YouTube to see the results)
 [![Pacman RL in Action](https://img.youtube.com/vi/PJC1XdCUf2I/0.jpg)](https://youtu.be/PJC1XdCUf2I)
 
 ## Environment
